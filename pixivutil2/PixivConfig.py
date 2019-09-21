@@ -8,7 +8,7 @@ import shutil
 import sys
 import time
 
-import PixivHelper
+from . import PixivHelper
 
 script_path = PixivHelper.module_path()
 
@@ -118,7 +118,7 @@ class PixivConfig(object):
         if path is not None:
             self.configFileLocation = path
         else:
-            self.configFileLocation = script_path + os.sep + 'config.ini'
+            self.configFileLocation = 'config.ini'
 
         print('Reading', self.configFileLocation, '...')
         haveError = False

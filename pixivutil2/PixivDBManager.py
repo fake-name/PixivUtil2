@@ -10,9 +10,9 @@ import sqlite3
 import sys
 from datetime import datetime
 
-import PixivConfig
-import PixivHelper
-from PixivModel import PixivListItem
+from . import PixivConfig
+from . import PixivHelper
+from .PixivModel import PixivListItem
 
 script_path = PixivHelper.module_path()
 

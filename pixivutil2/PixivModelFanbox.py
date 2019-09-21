@@ -4,10 +4,10 @@ import codecs
 import os
 
 import demjson
-import datetime_z
+from .util import datetime_z
 
-from PixivException import PixivException
-import PixivHelper
+from .PixivException import PixivException
+from . import PixivHelper
 
 
 class Fanbox(object):
@@ -200,12 +200,13 @@ class FanboxPost(object):
                              self.getEmbedData(jsPost["body"]["video"], jsPost))
 
     def getEmbedData(self, embedData, jsPost):
-        if not os.path.exists("content_provider.json"):
+        provider_json_file = os.path.join(os.path.dirname(__file__), "content_provider.json")
+        if not os.path.exists(provider_json_file):
             raise PixivException("Missing content_provider.json, please redownload application!",
                                   errorCode=PixivException.MISSING_CONFIG,
                                   htmlPage=None)
 
-        cfg = demjson.decode_file("content_provider.json")
+        cfg = demjson.decode_file(provider_json_file)
         embed_cfg = cfg["embedConfig"]
         current_provider = embedData["serviceProvider"]
 

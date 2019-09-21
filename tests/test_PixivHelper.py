@@ -6,10 +6,10 @@ import os
 import unittest
 import json
 
-import PixivHelper
-from PixivModelWhiteCube import PixivImage
-from PixivModel import PixivArtist
-import PixivConfig
+from pixivutil2 import PixivHelper
+from pixivutil2.PixivModelWhiteCube import PixivImage
+from pixivutil2.PixivModel import PixivArtist
+from pixivutil2 import PixivConfig
 
 import bs4
 
@@ -44,7 +44,7 @@ class TestPixivHelper(unittest.TestCase):
         self.assertTrue(len(result) < 255)
 
     def testCreateMangaFilename(self):
-        p = open('./test/test-image-manga.htm', 'r')
+        p = open('./tests/test_files/test-image-manga.htm', 'r')
         page = as_soup(p.read())
         imageInfo = PixivImage(28820443, page)
         imageInfo.imageCount = 100
@@ -52,7 +52,7 @@ class TestPixivHelper(unittest.TestCase):
         del page
 
         # cross check with json value for artist info
-        js_file = open('./test/detail-554800.json', 'r')
+        js_file = open('./tests/test_files/detail-554800.json', 'r')
         js = json.load(js_file)
 
         self.assertEqual(imageInfo.artist.artistId, str(js["user"]["id"]))
@@ -77,14 +77,14 @@ class TestPixivHelper(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def testCreateFilenameUnicode(self):
-        p = open('./test/test-image-unicode.htm', 'r')
+        p = open('./tests/test_files/test-image-unicode.htm', 'r')
         page = as_soup(p.read())
         imageInfo = PixivImage(2493913, page)
         page.decompose()
         del page
 
         # cross check with json value for artist info
-        js_file = open('./test/detail-267014.json', 'r')
+        js_file = open('./tests/test_files/detail-267014.json', 'r')
         js = json.load(js_file)
 
         self.assertEqual(imageInfo.artist.artistId, str(js["user"]["id"]))
@@ -98,7 +98,7 @@ class TestPixivHelper(unittest.TestCase):
         self.assertEqual(result, expected)
 
 ##    def testcreateAvatarFilenameFormatNoSubfolderNoRootDir(self):
-##        p = open('./test/test-helper-avatar-name.htm', 'r')
+##        p = open('./tests/test_files/test-helper-avatar-name.htm', 'r')
 ##        page = as_soup(p.read())
 ##        artist = PixivArtist(mid=1107124, page=page)
 ##        targetDir = ''
@@ -113,7 +113,7 @@ class TestPixivHelper(unittest.TestCase):
 ##        self.assertEqual(filename, self.currPath + os.sep + u'folder.jpg')
 
 ##    def testcreateAvatarFilenameFormatWithSubfolderNoRootDir(self):
-##        p = open('./test/test-helper-avatar-name.htm', 'r')
+##        p = open('./tests/test_files/test-helper-avatar-name.htm', 'r')
 ##        page = as_soup(p.read())
 ##        artist = PixivArtist(mid=1107124, page=page)
 ##        targetDir = ''
@@ -127,7 +127,7 @@ class TestPixivHelper(unittest.TestCase):
 ##        self.assertEqual(filename, self.currPath + os.sep + u'kirabara29 (1107124)' + os.sep + 'folder.jpg')
 
 ##    def testcreateAvatarFilenameFormatNoSubfolderWithRootDir3(self):
-##        p = open('./test/test-helper-avatar-name.htm', 'r')
+##        p = open('./tests/test_files/test-helper-avatar-name.htm', 'r')
 ##        page = as_soup(p.read())
 ##        artist = PixivArtist(mid=1107124, page=page)
 ##        targetDir = os.path.abspath('.')
@@ -140,7 +140,7 @@ class TestPixivHelper(unittest.TestCase):
 ##        self.assertEqual(filename, targetDir + os.sep + u'folder.jpg')
 
 ##    def testcreateAvatarFilenameFormatWithSubfolderWithRootDir4(self):
-##        p = open('./test/test-helper-avatar-name.htm', 'r')
+##        p = open('./tests/test_files/test-helper-avatar-name.htm', 'r')
 ##        page = as_soup(p.read())
 ##        artist = PixivArtist(mid=1107124, page=page)
 ##        targetDir = os.path.abspath('.')
@@ -153,7 +153,7 @@ class TestPixivHelper(unittest.TestCase):
 ##        self.assertEqual(filename, targetDir + os.sep + u'kirabara29 (1107124)' + os.sep + 'folder.jpg')
 
 ##    def testcreateAvatarFilenameFormatNoSubfolderWithCustomRootDir5(self):
-##        p = open('./test/test-helper-avatar-name.htm', 'r')
+##        p = open('./tests/test_files/test-helper-avatar-name.htm', 'r')
 ##        page = as_soup(p.read())
 ##        artist = PixivArtist(mid=1107124, page=page)
 ##        targetDir = os.path.abspath(os.sep + 'images')
@@ -166,7 +166,7 @@ class TestPixivHelper(unittest.TestCase):
 ##        self.assertEqual(filename, targetDir + os.sep + 'folder.jpg')
 
 ##    def testcreateAvatarFilenameFormatWithSubfolderWithCustomRootDir6(self):
-##        p = open('./test/test-helper-avatar-name.htm', 'r')
+##        p = open('./tests/test_files/test-helper-avatar-name.htm', 'r')
 ##        page = as_soup(p.read())
 ##        artist = PixivArtist(mid=1107124, page=page)
 ##        targetDir = os.path.abspath(os.sep + 'images')
@@ -179,14 +179,14 @@ class TestPixivHelper(unittest.TestCase):
 ##        self.assertEqual(filename, targetDir + os.sep + 'kirabara29 (1107124)' + os.sep + 'folder.jpg')
 
     def testParseLoginError(self):
-        p = open('./test/test-login-error.htm', 'r')
+        p = open('./tests/test_files/test-login-error.htm', 'r')
         page = as_soup(p.read())
         r = page.findAll('span', attrs={'class': 'error'})
         self.assertTrue(len(r) > 0)
         self.assertEqual('Please ensure your pixiv ID, email address and password is entered correctly.', r[0].string)
 
     def testParseLoginForm(self):
-        p = open('./test/test-login-form.html', 'r')
+        p = open('./tests/test_files/test-login-form.html', 'r')
         page = as_soup(p.read())
         r = page.findAll('form', attrs={'action': '/login.php'})
         # print(r)

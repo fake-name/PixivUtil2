@@ -24,9 +24,9 @@ from html.parser import HTMLParser
 
 import imageio
 
-import PixivConstant
-import PixivModel
-from apng import APNG
+from . import PixivConstant
+from . import PixivModel
+from .util.apng import APNG
 
 Logger = None
 _config = None

@@ -3,9 +3,9 @@ import json
 from datetime import datetime
 import hashlib
 
-import PixivHelper
-from PixivHelper import LocalUTCOffsetTimezone
-from PixivException import PixivException
+from . import PixivHelper
+from .PixivHelper import LocalUTCOffsetTimezone
+from .PixivException import PixivException
 
 
 class PixivOAuth(object):

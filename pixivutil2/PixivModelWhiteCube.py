@@ -10,9 +10,9 @@ from collections import OrderedDict
 import demjson
 from bs4 import BeautifulSoup
 
-import datetime_z
-import PixivModel
-from PixivException import PixivException
+from .util import datetime_z
+from . import PixivModel
+from .PixivException import PixivException
 
 re_payload = re.compile(r"(\{token.*\})\);")
 

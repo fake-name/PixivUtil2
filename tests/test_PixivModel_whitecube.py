@@ -9,9 +9,9 @@ import unittest
 from bs4 import BeautifulSoup
 import json
 
-import PixivHelper
-from PixivModelWhiteCube import PixivImage, PixivArtist
-from PixivException import PixivException
+from pixivutil2 import PixivHelper
+from pixivutil2.PixivModelWhiteCube import PixivImage, PixivArtist
+from pixivutil2.PixivException import PixivException
 
 
 class TestPixivModel_WhiteCube(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
     PixivHelper.GetLogger()
 
     def testParseLoginForm(self):
-        p = open('./test/pixiv-whitecube-main.html', 'r')
+        p = open('./tests/test_files/pixiv-whitecube-main.html', 'r')
         page = BeautifulSoup(p.read(), features='lxml')
         init_config = page.find('input', attrs={'id': 'init-config'})
         js_init_config = json.loads(init_config['value'])
@@ -28,7 +28,7 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
 
 ##    @pytest.mark.xfail
 ##    def testParseImage(self):
-##        p = open('./test/work_details_modal_whitecube.json', 'r')
+##        p = open('./tests/test_files/work_details_modal_whitecube.json', 'r')
 ##        image = PixivImage(59521621, p.read())
 ##        self.assertIsNotNone(image)
 ##        image.PrintInfo()
@@ -36,14 +36,14 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
 ##
 ##    @pytest.mark.xfail
 ##    def testParseManga(self):
-##        p = open('./test/work_details_modal_whitecube-manga.json', 'r')
+##        p = open('./tests/test_files/work_details_modal_whitecube-manga.json', 'r')
 ##        image = PixivImage(59532028, p.read())
 ##        self.assertIsNotNone(image)
 ##        image.PrintInfo()
 ##        self.assertEqual(image.imageMode, "manga")
 
     def testParseMemberError(self):
-        p = open('./test/ajax-error.json', 'r')
+        p = open('./tests/test_files/ajax-error.json', 'r')
         try:
             member = PixivArtist(14095911, p.read())
             self.fail("Exception expected.")
@@ -51,10 +51,10 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
             self.assertTrue(ex.errorCode == PixivException.OTHER_MEMBER_ERROR)
 
     def testParseMemberImages(self):
-        p = open('./test/all-14095911.json', 'r')
+        p = open('./tests/test_files/all-14095911.json', 'r')
         member = PixivArtist(14095911, p.read(), False, 0, 24)
         self.assertIsNotNone(member)
-        p2 = open('./test/userdetail-14095911.json', 'r')
+        p2 = open('./tests/test_files/userdetail-14095911.json', 'r')
         info = json.loads(p2.read())
         member.ParseInfo(info, False, False)
 
@@ -67,10 +67,10 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
         self.assertEqual(member.artistAvatar, "https://i.pximg.net/user-profile/img/2018/02/01/23/55/46/13768317_dc1474fef3dc982ade71c1b2dbf32d9e.png")
 
     def testParseMemberImages2(self):
-        p = open('./test/all-26357.json', 'r')
+        p = open('./tests/test_files/all-26357.json', 'r')
         member = PixivArtist(26357, p.read(), False, 0, 24)
         self.assertIsNotNone(member)
-        p2 = open('./test/userdetail-26357.json', 'r')
+        p2 = open('./tests/test_files/userdetail-26357.json', 'r')
         info = json.loads(p2.read())
         member.ParseInfo(info, False, False)
 
@@ -84,10 +84,10 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
 
     # https://www.pixiv.net/ajax/user/14095911/profile/all
     def testParseMemberImagesLastPage(self):
-        p = open('./test/all-14095911.json', 'r')
+        p = open('./tests/test_files/all-14095911.json', 'r')
         member = PixivArtist(14095911, p.read(), False, 96, 48)
         self.assertIsNotNone(member)
-        p2 = open('./test/userdetail-14095911.json', 'r')
+        p2 = open('./tests/test_files/userdetail-14095911.json', 'r')
         info = json.loads(p2.read())
         member.ParseInfo(info, False, False)
 
@@ -99,10 +99,10 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
 
     # /ajax/user/14095911/illustmanga/tag?tag=R-18&offset=0&limit=48
     def testParseMemberImagesByTags(self):
-        p = open('./test/tag-R-18-14095911.json', 'r')
+        p = open('./tests/test_files/tag-R-18-14095911.json', 'r')
         member = PixivArtist(14095911, p.read(), False, 0, 24)
         self.assertIsNotNone(member)
-        p2 = open('./test/userdetail-14095911.json', 'r')
+        p2 = open('./tests/test_files/userdetail-14095911.json', 'r')
         info = json.loads(p2.read())
         member.ParseInfo(info, False, False)
 
@@ -113,10 +113,10 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
 
     # /ajax/user/14095911/illustmanga/tag?tag=R-18&offset=48&limit=48
     def testParseMemberImagesByTagsLastPage(self):
-        p = open('./test/tag-R-18-14095911-lastpage.json', 'r')
+        p = open('./tests/test_files/tag-R-18-14095911-lastpage.json', 'r')
         member = PixivArtist(14095911, p.read(), False, 48, 24)
         self.assertIsNotNone(member)
-        p2 = open('./test/userdetail-14095911.json', 'r')
+        p2 = open('./tests/test_files/userdetail-14095911.json', 'r')
         info = json.loads(p2.read())
         member.ParseInfo(info, False, False)
 
@@ -126,10 +126,10 @@ class TestPixivModel_WhiteCube(unittest.TestCase):
         self.assertTrue(member.isLastPage)
 
     def testParseMemberBookmarksByTags(self):
-        p = open('./test/bookmarks-1039353.json', 'r')
+        p = open('./tests/test_files/bookmarks-1039353.json', 'r')
         member = PixivArtist(1039353, p.read(), False, 0, 24)
         self.assertIsNotNone(member)
-        p2 = open('./test/userdetail-1039353.json', 'r')
+        p2 = open('./tests/test_files/userdetail-1039353.json', 'r')
         info = json.loads(p2.read())
         member.ParseInfo(info, False, True)
 

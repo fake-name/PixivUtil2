@@ -7,8 +7,8 @@ import os
 import unittest
 import re
 
-from PixivModelFanbox import Fanbox, FanboxArtist, FanboxPost
-import PixivHelper
+from pixivutil2.PixivModelFanbox import Fanbox, FanboxArtist, FanboxPost
+from pixivutil2 import PixivHelper
 
 temp = PixivHelper.__re_manga_index
 
@@ -18,7 +18,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
     PixivHelper.GetLogger()
 
     def testFanboxSupportedArtist(self):
-        p = open('./test/Fanbox_supported_artist.json', 'r').read()
+        p = open('./tests/test_files/Fanbox_supported_artist.json', 'r').read()
         result = Fanbox(p)
         self.assertIsNotNone(result)
 
@@ -28,7 +28,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         self.assertTrue(30716447 in result.supportedArtist)
 
     def testFanboxArtistPosts(self):
-        p = open('./test/Fanbox_artist_posts.json', 'r').read()
+        p = open('./tests/test_files/Fanbox_artist_posts.json', 'r').read()
         result = FanboxArtist(15521131, p)
         self.assertIsNotNone(result)
 
@@ -62,7 +62,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         self.assertEqual(len(result.posts[3].images), 4)
 
     def testFanboxArtistArticle(self):
-        p = open('./test/Fanbox_artist_posts_article.json', 'r').read()
+        p = open('./tests/test_files/Fanbox_artist_posts_article.json', 'r').read()
         result = FanboxArtist(190026, p)
         self.assertIsNotNone(result)
 
@@ -81,7 +81,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         # result.posts[0].WriteInfo("./201946.txt")
 
     def testFanboxArtistArticleFileMap(self):
-        p = open('./test/creator_with_filemap.json', 'r').read()
+        p = open('./tests/test_files/creator_with_filemap.json', 'r').read()
         result = FanboxArtist(190026, p)
         self.assertIsNotNone(result)
 
@@ -101,7 +101,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         # result.posts[0].WriteInfo("./210980.txt")
 
     def testFanboxArtistVideo(self):
-        p = open('./test/creator_posts_with_video.json', 'r').read()
+        p = open('./tests/test_files/creator_posts_with_video.json', 'r').read()
         result = FanboxArtist(711048, p)
         self.assertIsNotNone(result)
 
@@ -121,7 +121,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         # result.posts[0].WriteInfo("./210980.txt")
 
     def testFanboxArtistArticleEmbedTwitter(self):
-        p = open('./test/creator_embedMap.json', 'r').read()
+        p = open('./tests/test_files/creator_embedMap.json', 'r').read()
         result = FanboxArtist(68813, p)
         self.assertIsNotNone(result)
 
@@ -140,7 +140,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         # result.posts[0].WriteInfo("./285502.txt")
 
     def testFanboxArtistPostsNextPage(self):
-        p2 = open('./test/Fanbox_artist_posts_nextpage.json', 'r').read()
+        p2 = open('./tests/test_files/Fanbox_artist_posts_nextpage.json', 'r').read()
         result = FanboxArtist(15521131, p2)
         self.assertIsNotNone(result)
 
@@ -150,7 +150,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         self.assertEqual(len(result.posts), 1)
 
     def testFanboxArtistPostsRestricted(self):
-        p = open('./test/Fanbox_artist_posts_restricted.json', 'r').read()
+        p = open('./tests/test_files/Fanbox_artist_posts_restricted.json', 'r').read()
         result = FanboxArtist(15521131, p)
         self.assertIsNotNone(result)
 
@@ -163,7 +163,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
             self.assertTrue(post.is_restricted)
 
     def testFanboxArtistPostsRestrictedNextPage(self):
-        p = open('./test/Fanbox_artist_posts_next_page_restricted.json', 'r').read()
+        p = open('./tests/test_files/Fanbox_artist_posts_next_page_restricted.json', 'r').read()
         result = FanboxArtist(15521131, p)
         self.assertIsNotNone(result)
 
@@ -176,7 +176,7 @@ class TestPixivModel_Fanbox(unittest.TestCase):
         self.assertFalse(result.posts[1].is_restricted)
 
     def testFanboxFilename(self):
-        p = open('./test/Fanbox_artist_posts.json', 'r').read()
+        p = open('./tests/test_files/Fanbox_artist_posts.json', 'r').read()
         result = FanboxArtist(15521131, p)
         self.assertIsNotNone(result)
         root_dir = os.path.abspath(os.path.curdir)

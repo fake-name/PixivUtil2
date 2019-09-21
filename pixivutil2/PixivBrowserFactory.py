@@ -18,12 +18,12 @@ from bs4 import BeautifulSoup
 import demjson
 import socks
 
-import PixivHelper
-import PixivModel
-import PixivModelWhiteCube
-from PixivException import PixivException
-from PixivModelFanbox import Fanbox, FanboxArtist
-from PixivOAuth import PixivOAuth
+from . import PixivHelper
+from . import PixivModel
+from . import PixivModelWhiteCube
+from .PixivException import PixivException
+from .PixivModelFanbox import Fanbox, FanboxArtist
+from .PixivOAuth import PixivOAuth
 
 defaultCookieJar = None
 defaultConfig = None
