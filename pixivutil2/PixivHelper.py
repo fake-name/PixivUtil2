@@ -16,10 +16,15 @@ import tempfile
 import time
 import traceback
 import unicodedata
-import urllib.request, urllib.parse, urllib.error
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 import zipfile
-from datetime import date, datetime, timedelta, tzinfo
+import bs4
+from datetime import date
+from datetime import datetime
+from datetime import timedelta
+from datetime import tzinfo
 from html.parser import HTMLParser
 
 import imageio
@@ -36,26 +41,40 @@ def setConfig(config):
     global _config
     _config = config
 
+log_prefix = "PixivUtil"
 
-def GetLogger(level=logging.DEBUG):
+def init_logging(level=logging.DEBUG):
+    '''
+    Configure logging for everythign on the PixivUtil.* log path.
+    '''
+    logging.basicConfig(level=level)
+    script_path = module_path()
+    logger = logging.getLogger(log_prefix)
+    logger.setLevel(level)
+    handler = logging.handlers.RotatingFileHandler(script_path + os.sep + PixivConstant.PIXIVUTIL_LOG_FILE,
+                                                          maxBytes=PixivConstant.PIXIVUTIL_LOG_SIZE,
+                                                          backupCount=PixivConstant.PIXIVUTIL_LOG_COUNT)
+    formatter = logging.Formatter(PixivConstant.PIXIVUTIL_LOG_FORMAT)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
+def getLogger(prefix="Anonymous"):
     '''Set up logging'''
-    global Logger
-    if Logger is None:
-        script_path = module_path()
-        Logger = logging.getLogger('PixivUtil' + PixivConstant.PIXIVUTIL_VERSION)
-        Logger.setLevel(level)
-        __logHandler__ = logging.handlers.RotatingFileHandler(script_path + os.sep + PixivConstant.PIXIVUTIL_LOG_FILE,
-                                                              maxBytes=PixivConstant.PIXIVUTIL_LOG_SIZE,
-                                                              backupCount=PixivConstant.PIXIVUTIL_LOG_COUNT)
-        __formatter__ = logging.Formatter(PixivConstant.PIXIVUTIL_LOG_FORMAT)
-        __logHandler__.setFormatter(__formatter__)
-        Logger.addHandler(__logHandler__)
-    return Logger
+    path = [log_prefix]
+    if prefix:
+        assert not prefix.endswith("."), "Logging prefix must not end with a period."
+        path.append(prefix)
+
+    path.append(PixivConstant.PIXIVUTIL_VERSION)
+
+    return logging.getLogger(".".join(path))
 
 
 def setLogLevel(level):
-    Logger.info("Setting log level to: %s", level)
-    GetLogger(level).setLevel(level)
+    root_logger = logging.getLogger(log_prefix)
+    root_logger.info("Setting log level to: %s", level)
+    root_logger.setLevel(level)
 
 
 if os.sep == '/':
@@ -125,7 +144,7 @@ def sanitizeFilename(s, rootDir=None):
     else:
         tempName = name
 
-    GetLogger().debug("Sanitized Filename: %s", tempName.strip())
+    getLogger().debug("Sanitized Filename: %s", tempName.strip())
 
     return tempName.strip()
 
@@ -447,16 +466,16 @@ def dumpHtml(filename, html):
     return ""
 
 
-def print_and_log(level, msg):
+def print_and_log(level, *args, **kwargs):
+    logger = getLogger(prefix='LogAndDebug')
     if level == 'debug':
-        GetLogger().debug(msg)
+        logger.debug(*args, **kwargs)
     else:
-        safePrint(msg)
         if level == 'info':
-            GetLogger().info(msg)
+            logger.info(*args, **kwargs)
         elif level == 'error':
-            GetLogger().error(msg)
-            GetLogger().error(traceback.format_exc())
+            logger.error(*args, **kwargs)
+            logger.error(traceback.format_exc())
 
 
 def HaveStrings(page, strings):
@@ -589,7 +608,7 @@ def downloadImage(url, filename, res, file_size, overwrite):
     # try to save to the given filename + .pixiv extension if possible
     try:
         makeSubdirs(filename)
-        save = file(filename + '.pixiv', 'wb+', 4096)
+        save = open(filename + '.pixiv', 'wb+', 4096)
     except IOError:
         print_and_log('error', "Error at download_image(): Cannot save {0} to {1}: {2}".format(url, filename, sys.exc_info()))
 
@@ -597,7 +616,7 @@ def downloadImage(url, filename, res, file_size, overwrite):
         filename = os.path.split(url)[1]
         filename = filename.split("?")[0]
         filename = sanitizeFilename(filename)
-        save = file(filename + '.pixiv', 'wb+', 4096)
+        save = open(filename + '.pixiv', 'wb+', 4096)
         print_and_log('info', 'File is saved to ' + filename)
 
     # download the file
@@ -888,7 +907,7 @@ def ParseDateTime(worksDate, dateFormat):
         try:
             worksDateDateTime = datetime.strptime(worksDate, dateFormat)
         except ValueError as ve:
-            GetLogger().exception('Error when parsing datetime: %s using date format %s', worksDate, dateFormat)
+            getLogger().exception('Error when parsing datetime: %s using date format %s', worksDate, dateFormat)
             raise
     else:
         worksDate = worksDate.replace('/', '-')
@@ -896,7 +915,7 @@ def ParseDateTime(worksDate, dateFormat):
             try:
                 worksDateDateTime = datetime.strptime(worksDate, '%m-%d-%Y %H:%M')
             except ValueError as ve:
-                GetLogger().exception('Error when parsing datetime: %s', worksDate)
+                getLogger().exception('Error when parsing datetime: %s', worksDate)
                 worksDateDateTime = datetime.strptime(worksDate.split(" ")[0], '%Y-%m-%d')
         else:
             tempDate = worksDate.replace('年', '-').replace('月', '-').replace('日', '')
@@ -921,15 +940,20 @@ def encode_tags(tags):
 
 
 def check_version():
-    import PixivBrowserFactory
+    from pixivutil2 import PixivBrowserFactory
     br = PixivBrowserFactory.getBrowser()
     result = br.open_with_retry("https://raw.githubusercontent.com/Nandaka/PixivUtil2/master/PixivConstant.py", retry=3)
     page = result.read()
+    page = bs4.UnicodeDammit(page).unicode_markup
     latest_version_full = re.findall(r"PIXIVUTIL_VERSION = '(\d+)(.*)'", page)
 
     latest_version_int = int(latest_version_full[0][0])
     curr_version_int = int(re.findall(r"(\d+)", PixivConstant.PIXIVUTIL_VERSION)[0])
-    is_beta = True if latest_version_full[0][1].find("beta") >= 0 else False
+    if latest_version_full[0][1].find("beta") >= 0:
+        is_beta = True
+    else:
+        is_beta = True
+
     if latest_version_int > curr_version_int:
         print_and_log("info", "New version available: {0}".format(latest_version_full[0]))
 

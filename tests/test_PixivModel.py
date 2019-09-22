@@ -7,7 +7,6 @@ from pixivutil2.PixivModelWhiteCube import PixivImage
 from pixivutil2.PixivBrowserFactory import PixivBrowser
 from pixivutil2.PixivException import PixivException
 import bs4
-from mechanize import Browser
 import os
 import unittest
 

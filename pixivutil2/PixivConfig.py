@@ -15,7 +15,7 @@ script_path = PixivHelper.module_path()
 
 class PixivConfig(object):
     '''Configuration class'''
-    __logger = PixivHelper.GetLogger()
+    __logger = PixivHelper.getLogger()
     configFileLocation = "config.ini"
 
     # initialize default value

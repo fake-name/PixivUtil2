@@ -414,8 +414,8 @@ def parseJs(page):
 ##    result = "{".join(upd_js1_split)
 ##    result = result.replace(",}", "}")
 ##
-##    # PixivHelper.GetLogger().debug("ConvertedJson")
-##    # PixivHelper.GetLogger().debug(result)
+##    # PixivHelper.getLogger().debug("ConvertedJson")
+##    # PixivHelper.getLogger().debug(result)
 ##    try:
 ##        return json.loads(result)
 ##    except:

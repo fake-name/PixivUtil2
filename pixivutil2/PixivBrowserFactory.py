@@ -11,7 +11,9 @@ import socket
 import sys
 import time
 import urllib.request, urllib.parse, urllib.error
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 import urllib.parse
 from bs4 import BeautifulSoup
 
@@ -43,6 +45,7 @@ class PixivBrowser(mechanize.Browser):
     _password = None
     _oauth_manager = None
 
+
     def _put_to_cache(self, key, item, expiration=3600):
         expiry = time.time() + expiration
         self._cache[key] = (item, expiry)
@@ -62,8 +65,10 @@ class PixivBrowser(mechanize.Browser):
         try:
             mechanize.Browser.__init__(self, factory=mechanize.RobustFactory())
         except BaseException:
-            PixivHelper.GetLogger().info("Using default factory (mechanize 3.x ?)")
+            PixivHelper.getLogger().info("Using default factory (mechanize 3.x ?)")
             mechanize.Browser.__init__(self)
+
+        self.log = PixivHelper.getLogger(prefix="PixivBrowser")
 
         self._configureBrowser(config)
         self._configureCookie(cookie_jar)
@@ -78,7 +83,7 @@ class PixivBrowser(mechanize.Browser):
 
     def _configureBrowser(self, config):
         if config is None:
-            PixivHelper.GetLogger().info("No config given")
+            PixivHelper.getLogger().info("No config given")
             return
 
         global defaultConfig
@@ -97,10 +102,10 @@ class PixivBrowser(mechanize.Browser):
                 socks.wrapmodule(urllib2)
                 socks.wrapmodule(httplib)
 
-                PixivHelper.GetLogger().info("Using SOCKS Proxy: %s", config.proxyAddress)
+                PixivHelper.getLogger().info("Using SOCKS Proxy: %s", config.proxyAddress)
             else:
                 self.set_proxies(config.proxy)
-                PixivHelper.GetLogger().info("Using Proxy: %s", config.proxyAddress)
+                PixivHelper.getLogger().info("Using Proxy: %s", config.proxyAddress)
 
         # self.set_handle_equiv(True)
         # self.set_handle_gzip(True)
@@ -110,7 +115,7 @@ class PixivBrowser(mechanize.Browser):
 
         self.set_debug_http(config.debugHttp)
         if config.debugHttp:
-            PixivHelper.GetLogger().info('Debug HTTP enabled.')
+            PixivHelper.getLogger().info('Debug HTTP enabled.')
 
         # self.visit_response
         self.addheaders = [('User-agent', config.useragent)]
@@ -143,16 +148,16 @@ class PixivBrowser(mechanize.Browser):
 
         while True:
             try:
+                self.log.debug("Navigating to %s", url)
                 return self.open(url, data, timeout)
             except urllib.error.HTTPError:
                 raise
             except BaseException:
                 if retry_count < retry:
                     for t in range(1, self._config.retryWait):
-                        print(t, end=' ')
                         time.sleep(1)
-                    print('')
                     retry_count = retry_count + 1
+                    self.log.warning("Fetch failure %s. Retrying....", retry)
                 else:
                     PixivHelper.print_and_log('error', 'Error at open_with_retry(): {0}'.format(str(sys.exc_info())))
                     raise PixivException("Failed to get page: {0}, please check your internet connection/firewall/antivirus.".format(url), errorCode=PixivException.SERVER_ERROR)
@@ -170,13 +175,13 @@ class PixivBrowser(mechanize.Browser):
             try:
                 page = self.open_with_retry(req)
                 if returnParsed:
-                    parsedPage = BeautifulSoup(page.read())
+                    parsedPage = BeautifulSoup(page.read(), features='lxml')
                     return parsedPage
                 else:
                     return page
             except urllib.error.HTTPError as ex:
                 if ex.code in [403, 404, 503]:
-                    return BeautifulSoup(ex.read())
+                    return BeautifulSoup(ex.read(), features='lxml')
             except BaseException:
                 if retry_count < self._config.retry:
                     for t in range(1, self._config.retryWait):
@@ -241,11 +246,11 @@ class PixivBrowser(mechanize.Browser):
 
             if "logout.php" in resData:
                 PixivHelper.print_and_log('info', 'Login successful.')
-                PixivHelper.GetLogger().info('Logged in using cookie')
+                PixivHelper.getLogger().info('Logged in using cookie')
                 self.getMyId(parsed)
                 return True
             else:
-                PixivHelper.GetLogger().info('Failed to log in using cookie')
+                PixivHelper.getLogger().info('Failed to log in using cookie')
                 PixivHelper.print_and_log('info', 'Cookie already expired/invalid.')
         return False
 
@@ -254,9 +259,9 @@ class PixivBrowser(mechanize.Browser):
             PixivHelper.print_and_log('info', 'Logging in...')
             url = "https://accounts.pixiv.net/login"
             page = self.open_with_retry(url)
-
+            self.log.debug("On login page")
             # get the post key
-            parsed = BeautifulSoup(page)
+            parsed = BeautifulSoup(page, features='lxml')
             js_init_config = self._getInitConfig(parsed)
 
             data = {}
@@ -270,8 +275,10 @@ class PixivBrowser(mechanize.Browser):
             data['source'] = "accounts"
             data['ref'] = ''
 
-            request = urllib.request.Request("https://accounts.pixiv.net/api/login?lang=en", urllib.parse.urlencode(data))
-            response = self.open_with_retry(request)
+            self.log.debug("Doing login")
+            login_url = "https://accounts.pixiv.net/api/login?lang=en"
+            response = self.open_with_retry(login_url, data=urllib.parse.urlencode(data))
+            self.log.debug("Logged in!")
 
             return self.processLoginResult(response, username, password)
         except BaseException:
@@ -279,11 +286,11 @@ class PixivBrowser(mechanize.Browser):
             raise
 
     def processLoginResult(self, response, username, password):
-        PixivHelper.GetLogger().info('Logging in, return url: %s', response.geturl())
+        PixivHelper.getLogger().info('Logging in, return url: %s', response.geturl())
 
         # check the returned json
         js = response.read()
-        PixivHelper.GetLogger().info(str(js))
+        PixivHelper.getLogger().info(str(js))
         result = json.loads(js)
         # Fix Issue #181
         if result["body"] is not None and "success" in result["body"]:
@@ -340,7 +347,7 @@ class PixivBrowser(mechanize.Browser):
                      bookmark_count=-1, image_response_count=-1):
         image = None
         response = None
-        PixivHelper.GetLogger().debug("Getting image page: %s", image_id)
+        PixivHelper.getLogger().debug("Getting image page: %s", image_id)
         url = "https://www.pixiv.net/member_illust.php?mode=medium&illust_id={0}".format(image_id)
         # response = self.open(url).read()
         response = self.getPixivPage(url, returnParsed=False).read()
@@ -379,7 +386,7 @@ class PixivBrowser(mechanize.Browser):
                         image.artist.reference_image_id = image_id
                         self.getMemberInfoWhitecube(image.artist.artistId, image.artist)
         except:
-            PixivHelper.GetLogger().error("Respose data: \r\n %s", response)
+            PixivHelper.getLogger().error("Respose data: \r\n %s", response)
             raise
 
         return (image, response)
@@ -399,7 +406,7 @@ class PixivBrowser(mechanize.Browser):
             info = None
             if artist.reference_image_id > 0:
                 url = "https://www.pixiv.net/rpc/get_work.php?id={0}".format(artist.reference_image_id)
-                PixivHelper.GetLogger().debug("using webrpc: %s", url)
+                PixivHelper.getLogger().debug("using webrpc: %s", url)
                 info = self._get_from_cache(url)
                 if info is None:
                     request = urllib.request.Request(url)
@@ -420,7 +427,7 @@ class PixivBrowser(mechanize.Browser):
                 url = 'https://app-api.pixiv.net/v1/user/detail?user_id={0}'.format(member_id)
                 info = self._get_from_cache(url)
                 if info is None:
-                    PixivHelper.GetLogger().debug("Getting member information: %s", member_id)
+                    PixivHelper.getLogger().debug("Getting member information: %s", member_id)
                     login_response = self._oauth_manager.login()
                     if login_response.status_code == 200:
                         info = json.loads(login_response.text)
@@ -430,7 +437,7 @@ class PixivBrowser(mechanize.Browser):
                     response = self._oauth_manager.get_user_info(member_id)
                     info = json.loads(response.text)
                     self._put_to_cache(url, info)
-                    PixivHelper.GetLogger().debug("reply: %s", response.text)
+                    PixivHelper.getLogger().debug("reply: %s", response.text)
 
             artist.ParseInfo(info, False, bookmark=bookmark)
 
@@ -448,7 +455,7 @@ class PixivBrowser(mechanize.Browser):
         except urllib.error.HTTPError as error:
             errorCode = error.getcode()
             errorMessage = error.get_data()
-            PixivHelper.GetLogger().error("Error data: \r\n %s", errorMessage)
+            PixivHelper.getLogger().error("Error data: \r\n %s", errorMessage)
             payload = demjson.decode(errorMessage)
             # Issue #432
             if "message" in payload:
@@ -507,7 +514,7 @@ class PixivBrowser(mechanize.Browser):
                         response = ex.read()
                 self._put_to_cache(url, response)
 
-            PixivHelper.GetLogger().debug(response)
+            PixivHelper.getLogger().debug(response)
             artist = PixivModelWhiteCube.PixivArtist(member_id, response, False, offset, limit)
             artist.reference_image_id = artist.imageList[0] if len(artist.imageList) > 0 else 0
             self.getMemberInfoWhitecube(member_id, artist, bookmark)
@@ -632,7 +639,7 @@ def getBrowser(config=None, cookieJar=None):
         if cookieJar is not None:
             defaultCookieJar = cookieJar
         if defaultCookieJar is None:
-            PixivHelper.GetLogger().info("No default cookie jar available, creating... ")
+            PixivHelper.getLogger().info("No default cookie jar available, creating... ")
             defaultCookieJar = http.cookiejar.LWPCookieJar()
         _browser = PixivBrowser(defaultConfig, defaultCookieJar)
     elif config is not None:

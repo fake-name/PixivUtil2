@@ -16,7 +16,7 @@ from pixivutil2.PixivException import PixivException
 
 class TestPixivModel_WhiteCube(unittest.TestCase):
     currPath = str(os.path.abspath('.'))
-    PixivHelper.GetLogger()
+    PixivHelper.getLogger()
 
     def testParseLoginForm(self):
         p = open('./tests/test_files/pixiv-whitecube-main.html', 'r')

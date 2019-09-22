@@ -1,11 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# pylint: disable=I0011, C, C0302, W0602, W0603, W0703, R0102, R1702, R0912, R0915
+# pylint: disable=I0011, C, C0302, W0602, W0603, W0703, R0102, R1702, R0912, R0915, R1075
 
 
-import codecs
 import datetime
-import gc
 import getpass
 import os
 import re
@@ -13,11 +11,7 @@ import subprocess
 import sys
 import time
 import traceback
-import urllib.request
-import urllib.error
-import urllib.parse
-from bs4 import BeautifulSoup
-from optparse import OptionParser
+import mechanize
 
 import pixivutil2.PixivBrowserFactory
 import pixivutil2.PixivConfig
@@ -26,17 +20,14 @@ import pixivutil2.PixivDBManager
 import pixivutil2.PixivHelper
 import pixivutil2.PixivModelFanbox
 from pixivutil2.PixivException import PixivException
-from pixivutil2.PixivModel import PixivBookmark
-from pixivutil2.PixivModel import PixivGroup
-from pixivutil2.PixivModel import PixivImage
 from pixivutil2.PixivModel import PixivListItem
-from pixivutil2.PixivModel import PixivNewIllustBookmark
 from pixivutil2.PixivModel import PixivTags
+import pixivutil2.entry_point
+
 
 def patch_mechanize():
-
     # replace unenscape_charref implementation with our implementation due to bug.
-    mechanize._html.unescape_charref = PixivHelper.unescape_charref
+    mechanize._html.unescape_charref = pixivutil2.PixivHelper.unescape_charref
 
 
 def set_terminal_encoding():
@@ -53,8 +44,14 @@ def set_terminal_encoding():
         import win_unicode_console
 
         # monkey patch for #305
-        from ctypes import byref, c_ulong
-        from win_unicode_console.streams import set_last_error, ERROR_SUCCESS, ReadConsoleW, get_last_error, ERROR_OPERATION_ABORTED, WinError
+        from ctypes import byref
+        from ctypes import c_ulong
+        from win_unicode_console.streams import set_last_error
+        from win_unicode_console.streams import ERROR_SUCCESS
+        from win_unicode_console.streams import ReadConsoleW
+        from win_unicode_console.streams import get_last_error
+        from win_unicode_console.streams import ERROR_OPERATION_ABORTED
+        from win_unicode_console.streams import WinError
         from win_unicode_console.buffer import get_buffer
         EOF = b"\x1a\x00"
 
@@ -115,27 +112,30 @@ def set_terminal_encoding():
 def main():
     set_terminal_encoding()
     patch_mechanize()
+    pixivutil2.PixivHelper.init_logging()
+    cli_log = pixivutil2.PixivHelper.getLogger(prefix="CLI")
+    interface = pixivutil2.entry_point.PixivUtil()
 
-    set_console_title()
-    header()
+    interface.set_console_title()
+    interface.header()
 
     # Option Parser
-    global np_is_valid  # used in process image bookmark
-    global np  # used in various places for number of page overwriting
-    global start_iv  # used in download_image
-    global dfilename
-    global op
-    global __br__
-    global configfile
-    global ERROR_CODE
-    global __dbManager__
-    global __valid_options
+    # global np_is_valid  # used in process image bookmark
+    # global np  # used in various places for number of page overwriting
+    # global start_iv  # used in download_image
+    # global dfilename
+    # global op
+    # global __br__
+    # global configfile
+    # global ERROR_CODE
+    # global __dbManager__
+    # global __valid_options
 
-    parser = setup_option_parser()
-    (options, args) = parser.parse_args()
+    parser = interface.setup_option_parser()
+    options, args = parser.parse_args()
 
     op = options.startaction
-    if op in __valid_options:
+    if op in interface.valid_options:
         op_is_valid = True
     elif op is None:
         op_is_valid = False
@@ -159,32 +159,32 @@ def main():
         # Yavos: use print option instead when program should be running even with this error
         ### end new lines by Yavos ###
 
-    __log__.info('###############################################################')
+    cli_log.info('###############################################################')
     if len(sys.argv) == 0:
-        __log__.info('Starting with no argument..')
+        cli_log.info('Starting with no argument..')
     else:
-        __log__.info('Starting with argument: [%s].', " ".join(sys.argv))
+        cli_log.info('Starting with argument: [%s].', " ".join(sys.argv))
     try:
-        __config__.loadConfig(path=configfile)
-        PixivHelper.setConfig(__config__)
+        interface.config.loadConfig(path=configfile)
+        pixivutil2.PixivHelper.setConfig(interface.config)
     except BaseException:
-        print('Failed to read configuration.')
-        __log__.exception('Failed to read configuration.')
+        cli_log.info('Failed to read configuration.')
+        cli_log.exception('Failed to read configuration.')
 
-    PixivHelper.setLogLevel(__config__.logLevel)
-    if __br__ is None:
-        __br__ = PixivBrowserFactory.getBrowser(config=__config__)
+    pixivutil2.PixivHelper.setLogLevel(interface.config.logLevel)
+    if interface.browser is None:
+        interface.browser = pixivutil2.PixivBrowserFactory.getBrowser(config=interface.config)
 
-    if __config__.checkNewVersion:
-        PixivHelper.check_version()
+    if interface.config.checkNewVersion:
+        pixivutil2.PixivHelper.check_version()
 
     selection = None
 
     # Yavos: adding File for downloadlist
     now = datetime.date.today()
-    dfilename = __config__.downloadListDirectory + os.sep + 'Downloaded_on_' + now.strftime('%Y-%m-%d') + '.txt'
+    dfilename = interface.config.downloadListDirectory + os.sep + 'Downloaded_on_' + now.strftime('%Y-%m-%d') + '.txt'
     if not re.match(r'[a-zA-Z]:', dfilename):
-        dfilename = PixivHelper.toUnicode(sys.path[0], encoding=sys.stdin.encoding) + os.sep + dfilename
+        dfilename = pixivutil2.PixivHelper.toUnicode(sys.path[0], encoding=sys.stdin.encoding) + os.sep + dfilename
         # dfilename = sys.path[0].rsplit('\\',1)[0] + '\\' + dfilename #Yavos: only useful for myself
     dfilename = dfilename.replace('\\\\', '\\')
     dfilename = dfilename.replace('\\', os.sep)
@@ -193,90 +193,90 @@ def main():
     directory = os.path.dirname(dfilename)
     if not os.path.exists(directory):
         os.makedirs(directory)
-        __log__.info('Creating directory: %s', directory)
+        cli_log.info('Creating directory: %s', directory)
 
     # Yavos: adding IrfanView-Handling
     start_irfan_slide = False
     start_irfan_view = False
-    if __config__.startIrfanSlide or __config__.startIrfanView:
+    if interface.config.startIrfanSlide or interface.config.startIrfanView:
         start_iv = True
-        start_irfan_slide = __config__.startIrfanSlide
-        start_irfan_view = __config__.startIrfanView
+        start_irfan_slide = interface.config.startIrfanSlide
+        start_irfan_view = interface.config.startIrfanView
     elif options.start_iv is not None:
         start_iv = options.start_iv
         start_irfan_view = True
         start_irfan_slide = False
 
     try:
-        __dbManager__ = PixivDBManager.PixivDBManager(target=__config__.dbPath, config=__config__)
+        __dbManager__ = pixivutil2.PixivDBManager.PixivDBManager(target=interface.config.dbPath, config=interface.config)
         __dbManager__.createDatabase()
 
-        if __config__.useList:
-            list_txt = PixivListItem.parseList(__config__.downloadListDirectory + os.sep + 'list.txt', __config__.rootDirectory)
+        if interface.config.useList:
+            list_txt = PixivListItem.parseList(interface.config.downloadListDirectory + os.sep + 'list.txt', interface.config.rootDirectory)
             __dbManager__.importList(list_txt)
-            print("Updated " + str(len(list_txt)) + " items.")
+            cli_log.info("Updated %s items.", str(len(list_txt)))
 
-        if __config__.overwrite:
+        if interface.config.overwrite:
             msg = 'Overwrite enabled.'
-            PixivHelper.print_and_log('info', msg)
+            pixivutil2.PixivHelper.print_and_log('info', msg)
 
-        if __config__.dayLastUpdated != 0 and __config__.processFromDb:
-            PixivHelper.print_and_log('info',
-                                    'Only process members where the last update is >= ' + str(__config__.dayLastUpdated) + ' days ago')
+        if interface.config.dayLastUpdated != 0 and interface.config.processFromDb:
+            pixivutil2.PixivHelper.print_and_log('info',
+                                    'Only process members where the last update is >= ' + str(interface.config.dayLastUpdated) + ' days ago')
 
-        if __config__.dateDiff > 0:
-            PixivHelper.print_and_log('info', 'Only process image where day last updated >= ' + str(__config__.dateDiff))
+        if interface.config.dateDiff > 0:
+            pixivutil2.PixivHelper.print_and_log('info', 'Only process image where day last updated >= ' + str(interface.config.dateDiff))
 
-        if __config__.useBlacklistTags:
-            global __blacklistTags
-            __blacklistTags = PixivTags.parseTagsList("blacklist_tags.txt")
-            PixivHelper.print_and_log('info', 'Using Blacklist Tags: ' + str(len(__blacklistTags)) + " items.")
+        if interface.config.useBlacklistTags:
+            interface.blacklist_tags = PixivTags.parseTagsList("blacklist_tags.txt")
+            pixivutil2.PixivHelper.print_and_log('info', 'Using Blacklist Tags: %s items.', len(interface.blacklist_tags))
 
-        if __config__.useBlacklistMembers:
-            global __blacklistMembers
-            __blacklistMembers = PixivTags.parseTagsList("blacklist_members.txt")
-            PixivHelper.print_and_log('info', 'Using Blacklist Members: ' + str(len(__blacklistMembers)) + " members.")
+        if interface.config.useBlacklistMembers:
 
-        if __config__.useSuppressTags:
-            global __suppressTags
-            __suppressTags = PixivTags.parseTagsList("suppress_tags.txt")
-            PixivHelper.print_and_log('info', 'Using Suppress Tags: ' + str(len(__suppressTags)) + " items.")
+            interface.blacklist_members = PixivTags.parseTagsList("blacklist_members.txt")
+            pixivutil2.PixivHelper.print_and_log('info', 'Using Blacklist Members: %s members.', len(interface.blacklist_members))
 
-        if __config__.createWebm:
+        if interface.config.useSuppressTags:
+            interface.suppress_tags = PixivTags.parseTagsList("suppress_tags.txt")
+            pixivutil2.PixivHelper.print_and_log('info', 'Using Suppress Tags: %s items.', len(interface.suppress_tags))
+
+        if interface.config.createWebm:
             import shlex
-            cmd = "{0} -encoders".format(__config__.ffmpeg)
+            cmd = "{0} -encoders".format(interface.config.ffmpeg)
             ffmpeg_args = shlex.split(cmd)
             try:
                 p = subprocess.Popen(ffmpeg_args, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
                 buff = p.stdout.read()
-                if buff.find(__config__.ffmpegCodec) == 0:
-                    __config__.createWebm = False
-                    PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
-                    PixivHelper.print_and_log('error', 'Missing {0} encoder, createWebm disabled.'.format(__config__.ffmpegCodec))
-                    PixivHelper.print_and_log('error', 'Command used: {0}.'.format(cmd))
-                    PixivHelper.print_and_log('info', 'Please download ffmpeg with {0} encoder enabled.'.format(__config__.ffmpegCodec))
-                    PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
+                if buff.find(interface.config.ffmpegCodec) == 0:
+                    interface.config.createWebm = False
+                    pixivutil2.PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
+                    pixivutil2.PixivHelper.print_and_log('error', 'Missing {0} encoder, createWebm disabled.'.format(interface.config.ffmpegCodec))
+                    pixivutil2.PixivHelper.print_and_log('error', 'Command used: {0}.'.format(cmd))
+                    pixivutil2.PixivHelper.print_and_log('info', 'Please download ffmpeg with {0} encoder enabled.'.format(interface.config.ffmpegCodec))
+                    pixivutil2.PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
             except Exception as ex:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                __config__.createWebm = False
-                PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
-                PixivHelper.print_and_log('error', 'Failed to load ffmpeg, createWebm disabled: {0}'.format(exc_value))
-                PixivHelper.print_and_log('error', 'Command used: {0}.'.format(cmd))
-                PixivHelper.print_and_log('info', 'Please download ffmpeg with {0} encoder enabled.'.format(__config__.ffmpegCodec))
-                PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
+                interface.config.createWebm = False
+                pixivutil2.PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
+                pixivutil2.PixivHelper.print_and_log('error', 'Failed to load ffmpeg, createWebm disabled: {0}'.format(exc_value))
+                pixivutil2.PixivHelper.print_and_log('error', 'Command used: {0}.'.format(cmd))
+                pixivutil2.PixivHelper.print_and_log('info', 'Please download ffmpeg with {0} encoder enabled.'.format(interface.config.ffmpegCodec))
+                pixivutil2.PixivHelper.print_and_log('error', '{0}'.format("#" * 80))
 
-        if __config__.useLocalTimezone:
-            PixivHelper.print_and_log("info", "Using local timezone: {0}".format(PixivHelper.LocalUTCOffsetTimezone()))
+        if interface.config.useLocalTimezone:
+            pixivutil2.PixivHelper.print_and_log("info", "Using local timezone: %s", pixivutil2.PixivHelper.LocalUTCOffsetTimezone())
 
-        username = __config__.username
+        interface.probe()
+
+        username = interface.config.username
         if username == '':
             username = input('Username ? ')
         else:
             msg = 'Using Username: ' + username
-            print(msg)
-            __log__.info(msg)
+            cli_log.info(msg)
+            cli_log.info(msg)
 
-        password = __config__.password
+        password = interface.config.password
         if password == '':
             if os.name == 'nt':
                 win_unicode_console.disable()
@@ -286,39 +286,39 @@ def main():
 
         if np_is_valid and np != 0:  # Yavos: overwrite config-data
             msg = 'Limit up to: ' + str(np) + ' page(s). (set via commandline)'
-            print(msg)
-            __log__.info(msg)
-        elif __config__.numberOfPage != 0:
-            msg = 'Limit up to: ' + str(__config__.numberOfPage) + ' page(s).'
-            print(msg)
-            __log__.info(msg)
+            cli_log.info(msg)
+            cli_log.info(msg)
+        elif interface.config.numberOfPage != 0:
+            msg = 'Limit up to: ' + str(interface.config.numberOfPage) + ' page(s).'
+            cli_log.info(msg)
+            cli_log.info(msg)
 
-        result = doLogin(password, username)
+        result = interface.doLogin(password, username)
 
         if result:
-            np_is_valid, op_is_valid, selection = main_loop(ewd, op_is_valid, selection, np_is_valid, args)
+            np_is_valid, op_is_valid, selection = interface.main_loop(ewd, op_is_valid, selection, np_is_valid, args)
 
             if start_iv:  # Yavos: adding start_irfan_view-handling
-                PixivHelper.startIrfanView(dfilename, __config__.IrfanViewPath, start_irfan_slide, start_irfan_view)
+                pixivutil2.PixivHelper.startIrfanView(dfilename, interface.config.IrfanViewPath, start_irfan_slide, start_irfan_view)
         else:
-            ERROR_CODE = PixivException.NOT_LOGGED_IN
+            interface.last_error_code = PixivException.NOT_LOGGED_IN
     except PixivException as pex:
-        PixivHelper.print_and_log('error', pex.message)
-        ERROR_CODE = pex.errorCode
+        pixivutil2.PixivHelper.print_and_log('error', pex.message)
+        interface.last_error_code = pex.errorCode
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback.print_exception(exc_type, exc_value, exc_traceback)
-        __log__.exception('Unknown Error: %s', str(exc_value))
-        ERROR_CODE = getattr(ex, 'errorCode', -1)
+        cli_log.exception('Unknown Error: %s', str(exc_value))
+        interface.last_error_code = getattr(ex, 'errorCode', -1)
     finally:
         __dbManager__.close()
         if not ewd:  # Yavos: prevent input on exitwhendone
             if selection is None or selection != 'x':
                 input('press enter to exit.')
-        __log__.setLevel("INFO")
-        __log__.info('EXIT: %s', ERROR_CODE)
-        __log__.info('###############################################################')
-        sys.exit(ERROR_CODE)
+        cli_log.setLevel("INFO")
+        cli_log.info('EXIT: %s', interface.last_error_code)
+        cli_log.info('###############################################################')
+        sys.exit(interface.last_error_code)
 
 
 if __name__ == '__main__':

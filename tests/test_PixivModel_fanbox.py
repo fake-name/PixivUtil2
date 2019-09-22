@@ -15,7 +15,7 @@ temp = PixivHelper.__re_manga_index
 
 class TestPixivModel_Fanbox(unittest.TestCase):
     currPath = str(os.path.abspath('.'))
-    PixivHelper.GetLogger()
+    PixivHelper.getLogger()
 
     def testFanboxSupportedArtist(self):
         p = open('./tests/test_files/Fanbox_supported_artist.json', 'r').read()

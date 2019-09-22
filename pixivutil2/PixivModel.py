@@ -664,7 +664,7 @@ class PixivImage:
             self.bookmark_count = 0
             self.image_response_count = 0
         except BaseException:
-            PixivHelper.GetLogger().exception("Cannot parse bookmark count for: " + str(self.imageId))
+            PixivHelper.getLogger().exception("Cannot parse bookmark count for: " + str(self.imageId))
 
     def WriteInfo(self, filename):
         info = None
@@ -675,7 +675,7 @@ class PixivImage:
             info = codecs.open(filename, 'wb', encoding='utf-8')
         except IOError:
             info = codecs.open(str(self.imageId) + ".txt", 'wb', encoding='utf-8')
-            PixivHelper.GetLogger().exception(
+            PixivHelper.getLogger().exception(
                 "Error when saving image info: " + filename + ", file is saved to: " + str(self.imageId) + ".txt")
 
         info.write("ArtistID      = " + str(self.artist.artistId) + "\r\n")
@@ -707,7 +707,7 @@ class PixivImage:
             info = codecs.open(filename, 'w', encoding='utf-8')
         except IOError:
             info = codecs.open(str(self.imageId) + ".json", 'w', encoding='utf-8')
-            PixivHelper.GetLogger().exception("Error when saving image info: " + filename + ", file is saved to: " + str(self.imageId) + ".json")
+            PixivHelper.getLogger().exception("Error when saving image info: " + filename + ", file is saved to: " + str(self.imageId) + ".json")
 
         # Fix Issue #481
         jsonInfo = collections.OrderedDict()
@@ -739,14 +739,14 @@ class PixivImage:
             info = codecs.open(filename, 'wb', encoding='utf-8')
         except IOError:
             info = codecs.open(str(self.imageId) + ".js", 'wb', encoding='utf-8')
-            PixivHelper.GetLogger().exception(
+            PixivHelper.getLogger().exception(
                 "Error when saving image info: " + filename + ", file is saved to: " + str(self.imageId) + ".js")
         info.write(str(self.ugoira_data))
         info.close()
 
     def CreateUgoira(self, filename):
         if len(self.ugoira_data) == 0:
-            PixivHelper.GetLogger().exception("Missing ugoira animation info for image: " + str(self.imageId))
+            PixivHelper.getLogger().exception("Missing ugoira animation info for image: " + str(self.imageId))
 
         zipTarget = filename[:-4] + ".ugoira"
         if os.path.exists(zipTarget):
@@ -844,12 +844,12 @@ class PixivListItem:
                 line_no = line_no + 1
                 original_line = ""
         except UnicodeDecodeError:
-            PixivHelper.GetLogger().exception("PixivListItem.parseList(): Invalid value when parsing list")
+            PixivHelper.getLogger().exception("PixivListItem.parseList(): Invalid value when parsing list")
             PixivHelper.print_and_log('error',
                                     'Invalid value: {0} at line {1}, try to save the list.txt in UTF-8.'.format(
                                         original_line, line_no))
         except BaseException:
-            PixivHelper.GetLogger().exception("PixivListItem.parseList(): Invalid value when parsing list")
+            PixivHelper.getLogger().exception("PixivListItem.parseList(): Invalid value when parsing list")
             PixivHelper.print_and_log('error', 'Invalid value: {0} at line {1}'.format(original_line, line_no))
 
         reader.close()

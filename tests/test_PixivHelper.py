@@ -19,7 +19,7 @@ def as_soup(text):
 
 class TestPixivHelper(unittest.TestCase):
     currPath = str(os.path.abspath('.'))
-    PixivHelper.GetLogger()
+    PixivHelper.getLogger()
 
     def testSanitizeFilename(self):
         rootDir = '.'
